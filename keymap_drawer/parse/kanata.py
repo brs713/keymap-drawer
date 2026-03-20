@@ -38,33 +38,6 @@ class KanataKeymapParser(KeymapParser):
     _modifier_fn_to_std = {}
     _available_layouts: list[dict] = _get_layouts()
     _canonical_defsrcs: dict[str, str] = _get_canonical_defsrc_lookup()
-    _ignored_defsrcs: set[str] = {
-        "mlft",
-        "mouseleft",
-        "🖰1",
-        "‹🖰",
-        "mrgt",
-        "mouseright",
-        "🖰2",
-        "🖰›",
-        "mmid",
-        "mousemid",
-        "🖰3",
-        "mbck",
-        "mousebackward",
-        "🖰4",
-        "mfwd",
-        "mouseforward",
-        "🖰5",
-        "mwu",
-        "mousewheelup",
-        "mwd",
-        "mousewheeldown",
-        "mwl",
-        "mousewheelleft",
-        "mwr",
-        "mousewheelright",
-    }
 
     def __init__(
         self,
@@ -106,12 +79,10 @@ class KanataKeymapParser(KeymapParser):
 
     @classmethod
     def _canonicalize_defsrc(cls, val: str) -> str | None:
-        if val in cls._ignored_defsrcs:
-            logger.debug('"%s" in defsrc is not supported, ignoring for parsing', val)
-            return None
         if (canonical := cls._canonical_defsrcs.get(val)) is not None:
             return canonical
-        raise ValueError(f'Unknown defsrc item "{val}"!')
+        logger.debug('"%s" in defsrc is not supported, ignoring for parsing', val)
+        return None
 
     def _find_physical_layout(self, defsrc: list[str], extra_defsrc: Iterable[str] | None = None) -> None:
         canonical_with_ignored = [self._canonicalize_defsrc(val) for val in defsrc]
@@ -132,6 +103,7 @@ class KanataKeymapParser(KeymapParser):
                 return
 
         logger.debug("missing: %s", set(canonical + extra) - self._available_layouts[-1]["defsrc_index"])
+
         raise ValueError("Cannot find a physical layout that contains all items in defsrc")
 
     def _get_aliases_vars(self, nodes: list[pp.ParseResults]) -> None:
@@ -249,7 +221,7 @@ class KanataKeymapParser(KeymapParser):
                             default_action = self._str_to_key(action_elt, ind, [])
                         case _:
                             assert isinstance(input_elt, str)
-                            if input_elt in self._ignored_defsrcs:
+                            if input_elt not in self._canonical_defsrcs:
                                 logger.debug('ignoring "%s" in deflayermap', input_elt)
                                 continue
                             key_pos = self.defsrc_to_pos[self._canonicalize_defsrc(input_elt)]
@@ -306,20 +278,20 @@ class KanataKeymapParser(KeymapParser):
             logger.warning("deflocalkeys is not currently supported")
 
         defsrc = next(node[1:] for node in nodes if node[0] == "defsrc")
-        if any(val in self._ignored_defsrcs for val in defsrc):
-            logger.warning("mouse keys are not supported in defsrc, ignoring")
+        if any(val not in self._canonical_defsrcs for val in defsrc):
+            logger.warning("found non-supported items in defsrc, ignoring")
 
         raw_combo_nodes = list(
             chain.from_iterable(
                 batched(node[1:], 5) for node in nodes if node[0] in ("defchordsv2", "defchordsv2-experimental")
             )
         )
-        if any(pos in self._ignored_defsrcs for combo_def in raw_combo_nodes for pos in combo_def[0]):
-            logger.warning("mouse keys are not supported in combo pos, ignoring")
+        if any(pos not in self._canonical_defsrcs for combo_def in raw_combo_nodes for pos in combo_def[0]):
+            logger.warning("found non-supported positions in combo pos, ignoring")
 
         deflayermap_srcs = list(chain.from_iterable(node[2::2] for node in nodes if node[0] == "deflayermap"))
-        if any(val in self._ignored_defsrcs for val in deflayermap_srcs):
-            logger.warning("mouse keys are not supported in deflayermap, ignoring")
+        if any(val not in self._canonical_defsrcs for val in deflayermap_srcs):
+            logger.warning("found non-supported items in deflayermap, ignoring")
 
         self._find_physical_layout(
             defsrc,
