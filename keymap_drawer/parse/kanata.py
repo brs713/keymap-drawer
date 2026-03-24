@@ -52,7 +52,7 @@ class KanataKeymapParser(KeymapParser):
         self.vars: dict[str, str | pp.ParseResults] = {}
         self.physical_layout: dict | None = None
         self.defsrc_indices: list[int] | None = None
-        self.defsrc_to_pos: dict[str, int] | None = None
+        self.defsrc_to_pos: dict[str | None, int] | None = None
 
     @classmethod
     def _parse_cfg(cls, cfg_str: str, file_path: Path | None) -> list[pp.ParseResults]:
@@ -251,7 +251,7 @@ class KanataKeymapParser(KeymapParser):
             key_pos = [self.defsrc_to_pos.get(self._canonicalize_defsrc(val)) for val in pos_node]
             assert all(pos is not None for pos in key_pos)
 
-            if any(pos < 0 for pos in key_pos):  # contains an ignored defsrc
+            if any(pos < 0 for pos in key_pos):  # type: ignore
                 logger.debug('"%s" in combo contains ignored element', pos_node)
                 continue
 
