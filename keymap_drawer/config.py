@@ -318,7 +318,7 @@ class ParseConfig(BaseSettings, env_prefix="KEYMAP_", extra="ignore"):
     tap_toggle_label: str = "tap-toggle"
 
     # legend to output for transparent keys
-    trans_legend: str | dict = {"t": "▽", "type": "trans"}
+    trans_legend: str | dict = {"t": " ", "type": "trans"}
 
     # override layer names displayed on keys to specified legends
     layer_legend_map: dict[str, str] = {}
